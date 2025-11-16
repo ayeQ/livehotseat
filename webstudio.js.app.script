@@ -1,0 +1,32 @@
+<script>
+  const appName = 'polrized',
+        baseURL = 'https://livehotseat.nightowllogic.com',
+        isDev = window.location.hostname.includes('.wstd.io'),
+        bust = new Date().getTime(),
+        s = document.createElement("script");
+
+  s.onload = () => { LiveHotSeat.init(); };
+  s.src = isDev ? `${baseURL}/common.js?app=${appName}&v=${bust}`
+                : `${baseURL}/common.min.js?app=${appName}`;
+
+  document.head.appendChild(s);
+</script>
+
+  function GetAppName(){
+    // Get script as called from a src tag with querystring params.
+    const script = document.currentScript;
+    // Create a URL object from the script's src
+    const url = new URL(script.src);
+    // Use URLSearchParams to extract query values
+    const params = new URLSearchParams(url.search);
+    // Access individual query parameters
+    const app = params.get('app');
+    return app;
+  }
+
+  function testAppWebsitePermission(){
+    const testOrigin = isDev ? `https://${_appName}com.wstd.io`
+                             : `https://$www.{_appName}.com`
+    if (window.location.origin != testOrigin) 
+      throw new Error("Live Hot Seat App Website Permission Error.");
+  }
