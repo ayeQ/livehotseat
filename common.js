@@ -1,8 +1,9 @@
 const LiveHotSeat = (function () {
   const _version = '0.1.9-beta'; // major.minor.patch
-  const _appName = GetAppName();
+  const _appName = getAppName();
   const _appModeratorNames = ['livehotseat'];
   const _isModerator = _appModeratorNames.includes(_appName);
+  const _isHostOnClient = isHostOnClient();
   const _appClientNames = ['polrized', 'weekdaze'];
   const _appModerated = 'weekdaze';
   const _isClient = _appClientNames.includes(_appName);
@@ -25,7 +26,6 @@ const LiveHotSeat = (function () {
   let _ytplayer = null;
   let _youTubeVideoId = null;
 
-  
   let _loadingDots = 3;
   let _loadingFn = ()=>{
     const loadingTextEl = document.getElementById('loading-text');
@@ -183,7 +183,7 @@ const LiveHotSeat = (function () {
     handleSubscribeCallback({ event: 'READY'});
   }
 
-  function GetAppName(){
+  function getAppName(){
     // Get script as called from a src tag with querystring params.
     const script = document.currentScript;
     // Create a URL object from the script's src
@@ -193,6 +193,11 @@ const LiveHotSeat = (function () {
     // Access individual query parameters
     const app = params.get('app');
     return app;
+  }
+
+  function isHostOnClient(){
+    const isHostOnClient = localStorage.getItem('is-host-on-client');
+    return isHostOnClient;
   }
 
   function checkLocalStorage(){
@@ -226,7 +231,9 @@ const LiveHotSeat = (function () {
       _ytplayeriframe = document.createElement('iframe');
       _ytplayeriframe.id = 'ytplayeriframe';
       _ytplayeriframe.type = 'text/html';
-      _ytplayeriframe.src = `https://www.youtube-nocookie.com/embed/${_youTubeVideoId}?autoplay=0&rel=0&playsinline=1&keyboard=0&iv_load_policy=3&fs=0&controls=0&mute=0&enablejsapi=1&showinfo=0&modestbranding=1`; 
+      _ytplayeriframe.src = `https://www.youtube-nocookie.com/embed/${_youTubeVideoId}?si=RW9jDGDcqqPgCgr6$?autoplay=0&rel=0&playsinline=1&keyboard=0&iv_load_policy=3&fs=0&controls=0&mute=0&enablejsapi=1&showinfo=0&modestbranding=1`; 
+      _ytplayeriframe.allow = "accelerometer; autoplay;"
+      // _ytplayeriframe.src = `https://www.youtube-nocookie.com/embed/${_youTubeVideoId}?autoplay=0&rel=0&playsinline=1&keyboard=0&iv_load_policy=3&fs=0&controls=0&mute=0&enablejsapi=1&showinfo=0&modestbranding=1`; 
       _ytplayeriframe.style.width = '100vw';
       _ytplayeriframe.style.height = '100vh';
       _ytplayeriframe.style.position = 'absolute';
@@ -400,7 +407,8 @@ const LiveHotSeat = (function () {
     if (_isModerator) styleLiveBtn();
     if (_isClient && _isLive) {
       document.getElementById('open-live-hot-seat-button').style.display = 'inline-block';
-      renderLiveStreamOnClient();  
+      if (!_isHostOnClient) 
+        renderLiveStreamOnClient();  
     }
   }
 
@@ -879,10 +887,10 @@ const LiveHotSeat = (function () {
       };
 
       // Set a timeout for 10 seconds. If something uknown happens, it will be caught here...
-      const failedCameraTimeoutId = setTimeout(function(){
-          alert("Camera permissions should have been requested. Check browser/site settings.");
-          reject("Camera permissions should have been requested. Check browser/site settings.");
-      }, 10000);
+      // const failedCameraTimeoutId = setTimeout(function(){
+      //     alert("Camera permissions should have been requested. Check browser/site settings.");
+      //     reject("Camera permissions should have been requested. Check browser/site settings.");
+      // }, 10000);
 
 
       // This will trigger the loadeddata event if successful.
@@ -913,18 +921,18 @@ const LiveHotSeat = (function () {
               _liveAudienceVideo.srcObject = currentStream;
             };
 
-            clearTimeout(failedCameraTimeoutId);
+            // clearTimeout(failedCameraTimeoutId);
             _liveAudienceVideo.srcObject = stream;
             resolve(stream);
           })
           .catch(function(error) {
-              clearTimeout(failedCameraTimeoutId);
+              // clearTimeout(failedCameraTimeoutId);
               console.error("Camera access denied:", error);
               alert("Camera access denied.");
               reject(error);
           });
       } else {
-          clearTimeout(failedCameraTimeoutId);
+          // clearTimeout(failedCameraTimeoutId);
           alert("Camera not supported in this browser.");
           reject("Camera not supported in this browser.");
       }
