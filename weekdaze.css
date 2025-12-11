@@ -1,2 +1,19 @@
-/** Empty and not needed for now. All in Webstudio.
-*/
+#layoutContainer {
+    display: none;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    width: 100vw;
+    height: 100vh;
+    gap: 8px;
+    background: #000;
+    overflow: hidden;
+    z-index: 1;
+}
+
+#___ytsubscribe_0 {
+    z-index: 3;
+    position: fixed;
+    bottom: 15px;
+    left: 15px;
+}

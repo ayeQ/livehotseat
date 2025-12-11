@@ -1,7 +1,7 @@
-const LiveHotSeat = (function () {
+const YouHostLive = (function () {
   const _version = '0.1.9-beta'; // major.minor.patch
   const _appName = getAppName();
-  const _appModeratorNames = ['livehotseat'];
+  const _appModeratorNames = ['livehotseat','youhost'];
   const _isModerator = _appModeratorNames.includes(_appName);
   const _isHostOnClient = isHostOnClient();
   const _appClientNames = ['polrized', 'weekdaze'];
@@ -11,6 +11,8 @@ const LiveHotSeat = (function () {
   const supabaseUrl = 'https://edfgdkdaurrrygzyfiyc.supabase.co';
   const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkZmdka2RhdXJycnlnenlmaXljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4NDczNzgsImV4cCI6MjA3MTQyMzM3OH0.AWa3MC8T7nPYukDU7BI5yc9BOe5XbKCMV_1-R8RI6ZE';
   const _liveBtn = document.getElementById('live-button');
+  const _audienceToggle = document.getElementById('audience-toggle');
+  const _imageGrid = document.querySelector('.image-grid');
 
   let _initialized = false, _isLive = null;
   let _captchaReset = false;
@@ -18,13 +20,14 @@ const LiveHotSeat = (function () {
   let _liveAudienceVideo = null, _updateLiveAudienceUserIntervalId;
   let _sbc, _publicChannel = null, _privateChannel = null, _userSession = null, _display_name, _comment;
   let _users = {}, _debounceTimer = null, _fetchedUrls = new Map(), _private_channels = new Map();
-  let _liveHotSeatUserId = null, _liveHotSeatIsActive = false, _liveHotSeatFilter;
+  let _youHostLiveUserIds = [], _youHostLiveIsActive = false, _youHostLiveFilter;
   let _session, _layout, _layoutEl;
   let _subscribers = []
   let _subscribeCallback = null;
   let _ytplayeriframe = null;
   let _ytplayer = null;
   let _youTubeVideoId = null;
+
 
   let _loadingDots = 3;
   let _loadingFn = ()=>{
@@ -52,6 +55,7 @@ const LiveHotSeat = (function () {
     checkAppWebsitePermission();
 
     await Promise.all([
+      loadScript("https://apis.google.com/js/platform.js", false),
       loadScript("https://www.youtube.com/iframe_api", false),
       loadScript("https://challenges.cloudflare.com/turnstile/v0/api.js", false),
       loadScript("https://unpkg.com/@supabase/supabase-js@2.43.3/dist/umd/supabase.js", false),
@@ -60,9 +64,9 @@ const LiveHotSeat = (function () {
       loadScript("https://unpkg.com/gsap@3/dist/SplitText.min.js", false),
       loadScript("https://unpkg.com/@vonage/client-sdk-video@2/dist/js/opentok.js", false),
       loadScript("https://unpkg.com/opentok-layout-js@5.5.0/opentok-layout.js", false),
-      loadScript(`https://livehotseat.nightowllogic.com/${_isDev ? _appName : _appName + ".min"}.js`, true),
-      loadStyle("https://livehotseat.nightowllogic.com/common.css"),
-      loadStyle(`https://livehotseat.nightowllogic.com/${_appName}.css`)
+      loadScript(`https://youhostlive.nightowllogic.com/${_isDev ? _appName : _appName + ""}.js`, true),
+      loadStyle("https://youhostlive.nightowllogic.com/common.css"),
+      loadStyle(`https://youhostlive.nightowllogic.com/${_appName}.css`)
     ]);
 
     // Setup main connection and check show status. Captcha done here on load.
@@ -73,7 +77,7 @@ const LiveHotSeat = (function () {
     const turnstile_div = document.createElement("div");
     turnstile_div.id = 'turnstile-container';
     document.body.appendChild(turnstile_div);
-        
+
     // Version element
     const version_div = document.createElement("div");
     version_div.id = 'version';
@@ -132,6 +136,19 @@ const LiveHotSeat = (function () {
     });
 
     if (_isClient){
+      // YouTube Subscribe.
+      const ytsubscribe_div = document.createElement("div");
+      ytsubscribe_div.className = 'g-ytsubscribe';
+      ytsubscribe_div.dataset.channelid = 'UCHBn_I8jT29vLiu9Che-Lew';
+      ytsubscribe_div.dataset.layout = 'default';
+      ytsubscribe_div.dataset.count = 'default';
+      ytsubscribe_div.dataset.theme = 'dark';
+
+      document.body.appendChild(ytsubscribe_div);
+      if (window.gapi?.ytsubscribe?.go) {
+        gapi.ytsubscribe.go();
+      }
+
       document.getElementById('text-name').setAttribute('maxlength', '25');
       document.getElementById('textarea-comment').setAttribute('maxlength', '130');
 
@@ -164,6 +181,21 @@ const LiveHotSeat = (function () {
     if (_isModerator){
       _liveBtn.addEventListener('mouseup', async ()=>{
         await toggleShowIsLive();
+      });
+
+      _imageGrid.style.display = (_imageGrid.dataset.state == 'checked') ? 'flex' : 'none';
+
+      _audienceToggle.addEventListener('mouseup', async (e)=>{
+        switch (e.target.dataset.state) {
+          case 'unchecked':
+            _imageGrid.style.display = 'none';
+            break;
+         case 'checked':
+            _imageGrid.style.display = 'flex';
+            break;        
+          default:
+            break;
+        }
       });
     }
 
@@ -201,20 +233,27 @@ const LiveHotSeat = (function () {
   }
 
   function checkLocalStorage(){
-    const lsLiveHotSeatUserId = localStorage.getItem('LiveHotSeatUserId');
-    if (lsLiveHotSeatUserId != null){
-      _liveHotSeatUserId = lsLiveHotSeatUserId;
-    }
+    // const lsYouHostLiveUserId = localStorage.getItem('YouHostLiveUserId');
+    // if (lsYouHostLiveUserId != null){
+    //   _youHostLiveUserId = lsYouHostLiveUserId;
+    // }
+    // const lsYouHostLiveUserIds = localStorage.getItem('YouHostLiveUserIds');
+    // if (lsYouHostLiveUserIds != null){
+    //   _youHostLiveUserIds = JSON.parse(lsYouHostLiveUserIds);
+    // }    
   }
 
   function checkAppWebsitePermission(){
     if (!_isClient && !_isModerator)
-      throw new Error("Live Hot Seat App Website Permission Error.");
+      throw new Error("You Host Live App Website Permission Error.");
 
-    const testOrigin = _isDev ? `https://${_appName}com.wstd.io`
-                             : `https://www.${_appName}.com`
-    if (window.location.origin != testOrigin) 
-      throw new Error("Live Hot Seat App Website Permission Error.");
+    const testOriginCom = _isDev ? `https://${_appName}com.wstd.io`
+                             : `https://www.${_appName}.com`;
+    const testOriginLive = _isDev ? `https://${_appName}live.wstd.io`
+                             : `https://www.${_appName}.live`;
+							 
+    if (window.location.origin != testOriginCom && window.location.origin != testOriginLive) 
+      throw new Error("You Host Live App Website Permission Error.");
   }
 
   function handleSubscribeCallback(e){
@@ -260,7 +299,7 @@ const LiveHotSeat = (function () {
     document.getElementById('vimeoplayer').remove();
   }
 
-  async function startLiveHotSeat() {
+  async function startYouHostLive(e) {
     if (_liveAudienceVideo != null && _privateChannel != null){
       stopLiveAudience(true);
       
@@ -279,7 +318,7 @@ const LiveHotSeat = (function () {
           payload: {
               user_id: _userSession.user.id,
               display_name: _display_name,
-              acceptedLiveHotSeat: true,
+              acceptedYouHostLive: true,
               sent_at: new Date().toISOString()
           }
       });
@@ -288,27 +327,31 @@ const LiveHotSeat = (function () {
     const { applicationId, sessionId, token }  = await callFunction('vonage-session-endpoint', { name: 'Functions', role: _isModerator ? 'moderator' : 'publisher' });
  
     if (_layout == null) initOpenTokLayoutContainer();
-    const liveHotSeatContainerEl = document.getElementById('layoutContainer');
-    liveHotSeatContainerEl.style.display = 'flex';
+    const youHostLiveContainerEl = document.getElementById('layoutContainer');
+    youHostLiveContainerEl.style.display = 'flex';
 
     _subscribers = [];
-    initializeSession(applicationId, sessionId, token);
+    initializeSession(applicationId, sessionId, token, e);
   }
 
-  async function stopLiveHotSeat() {
-    const liveHotSeatContainerEl = document.getElementById('layoutContainer');
-    liveHotSeatContainerEl.style.display = 'none';
+  async function stopYouHostLive() {
+    const youHostLiveContainerEl = document.getElementById('layoutContainer');
+    youHostLiveContainerEl.style.display = 'none';
     if (_isModerator){
-      await sendUserMessage( _liveHotSeatUserId, { closeLiveHotSeat:true });
-      _liveHotSeatUserId = null;
-      localStorage.setItem('LiveHotSeatUserId', null);
+      _youHostLiveUserIds.forEach( async(youHostLiveUserId) => await sendUserMessage( youHostLiveUserId, { closeYouHostLive:true }));
+      _youHostLiveUserIds = [];
+      // localStorage.setItem('YouHostLiveUserIds', JSON.stringify(_youHostLiveUserIds));
+      // await sendUserMessage( _youHostLiveUserId, { closeYouHostLive:true });
+      // _youHostLiveUserId = null;
+      // localStorage.setItem('YouHostLiveUserId', null);
+
     } else {
       await _privateChannel.send({
         type: 'broadcast',
         event: 'private_message',
         payload: {
             user_id: _userSession.user.id,
-            closeLiveHotSeat: true,
+            closeYouHostLive: true,
             sent_at: new Date().toISOString(),
         }
       }); 
@@ -375,14 +418,14 @@ const LiveHotSeat = (function () {
     const version = await callFunction('version', { name: 'Functions' });
     if (version.version != _version) {
       alert(`Version mismatch: ${version.version} != ${_version}`);
-      location.reload(true);
+      throw new Error(`Version mismatch: ${version.version} != ${_version}`);
+      // location.reload(true);
     }
     document.getElementById('version').style.display = 'block';
   }
 
   function styleLiveBtn(){
     _liveBtn.innerHTML = _isLive ? `End Live (${_appModerated})` : `Go Live (${_appModerated})`;
-    _liveBtn.style.backgroundColor = _isLive ? 'red' : 'rgb(222, 226, 230)'; 
     _liveBtn.style.display = 'inline-block';
   }
   
@@ -406,9 +449,10 @@ const LiveHotSeat = (function () {
     }
     if (_isModerator) styleLiveBtn();
     if (_isClient && _isLive) {
-      document.getElementById('open-live-hot-seat-button').style.display = 'inline-block';
-      if (!_isHostOnClient) 
+      document.getElementById('open-you-host-live-button').style.display = 'inline-block';
+      if (!_isHostOnClient)  // I DON'T LIKE THIS ANYMORE. OR DO I?
         renderLiveStreamOnClient();  
+      
     }
   }
 
@@ -478,10 +522,12 @@ const LiveHotSeat = (function () {
                   const parent = img.closest('.image-item');
                   removeImageSmoothly(parent);
                   _private_channels.delete(img.id);
-                  if (img.id == _liveHotSeatUserId){
-                    _liveHotSeatUserId = null;
-                    localStorage.setItem('LiveHotSeatUserId', null);
-                  }
+                  _youHostLiveUserIds = _youHostLiveUserIds.filter( userId => !_youHostLiveUserIds.includes(userId));
+                  // localStorage.setItem('YouHostLiveUserIds', JSON.stringify(_youHostLiveUserIds));
+                  // if (img.id == _youHostLiveUserId){
+                  //   _youHostLiveUserId = null;
+                  //   localStorage.setItem('YouHostLiveUserId', null);
+                  // }
               }
           }
       )
@@ -502,17 +548,21 @@ const LiveHotSeat = (function () {
       return url;
   }
   
-  async function offerLiveHotSeat(liveAudienceUserId){
+  async function offerYouHostLive(liveAudienceUserId){
     const userImgEl = document.getElementById(liveAudienceUserId).closest('.image-item'); 
     if (userImgEl.classList.contains('selected')){
-      await sendUserMessage( liveAudienceUserId, { declineLiveHotSeat: true });
-      _liveHotSeatUserId = null;
-      localStorage.setItem('LiveHotSeatUserId', null);
+      await sendUserMessage( liveAudienceUserId, { declineYouHostLive: true });
+      _youHostLiveUserIds = _youHostLiveUserIds.filter( userId => userId != liveAudienceUserId);
+      // localStorage.setItem('YouHostLiveUserIds', JSON.stringify(_youHostLiveUserIds));
+      // _youHostLiveUserId = null;
+      // localStorage.setItem('YouHostLiveUserId', null);
       userImgEl.classList.remove('selected');
     } else {
-      await sendUserMessage( liveAudienceUserId, { offerLiveHotSeat: true });
-      _liveHotSeatUserId = liveAudienceUserId;
-      localStorage.setItem('LiveHotSeatUserId', _liveHotSeatUserId);
+      await sendUserMessage( liveAudienceUserId, { offerYouHostLive: true });
+      _youHostLiveUserIds.push(liveAudienceUserId);
+      // localStorage.setItem('YouHostLiveUserIds', JSON.stringify(_youHostLiveUserIds));
+      // _youHostLiveUserId = liveAudienceUserId;
+      // localStorage.setItem('YouHostLiveUserId', _youHostLiveUserId);
       userImgEl.classList.add('selected');
     }
   }
@@ -523,21 +573,21 @@ const LiveHotSeat = (function () {
 
     // Check for Live Hot Seat and join if live audience user accepted.
     if (!('user_id' in payload)) return;
-    if (_liveHotSeatUserId != payload.user_id) return;
+    // if (_youHostLiveUserId != payload.user_id) return;
+    if (!_youHostLiveUserIds.includes(payload.user_id)) return;
 
-    if (_liveHotSeatIsActive){
-        if ('closeLiveHotSeat' in payload && payload.closeLiveHotSeat){
-            stopLiveHotSeat();
+    if (_youHostLiveIsActive){
+        if ('closeYouHostLive' in payload && payload.closeYouHostLive){
+            stopYouHostLive();
         }
     } else {
-        if (!('acceptedLiveHotSeat' in payload)) return;
-        _liveHotSeatIsActive = true;
-        _liveHotSeatFilter = payload.filter;
+        if (!('acceptedYouHostLive' in payload)) return;
+        _youHostLiveIsActive = true;
+        // _youHostLiveFilter = payload.filter;
         if (_isModerator) _liveBtn.style.display = 'none';
-        document.querySelector('.image-grid').style.display = 'none';
-        document.getElementById('heading-image-grid').style.display = 'none';
-        document.getElementById('close-live-hot-seat-flexbox').style.display = 'flex';
-        startLiveHotSeat(); 
+        // _imageGrid.style.display = 'none';
+        document.getElementById('close-you-host-live-flexbox').style.display = 'flex';
+        startYouHostLive(); 
     }
   }
 
@@ -589,17 +639,19 @@ const LiveHotSeat = (function () {
   }
 
   function updateUserImage(u) {
-      const container = document.getElementsByClassName('image-grid')[0];
+      const container = _imageGrid;
       const existingImg = document.getElementById(`${u.user_id}`);
 
       if (existingImg) {
           existingImg.src = u.live_audience_image_url;
-          existingImg.style.filter = u.filter;
+          // existingImg.style.filter = u.filter;
       } else {
           // Create once if not existing
           const div = document.createElement('div');
           div.className = 'image-item';
-          if (u.user_id == _liveHotSeatUserId) div.classList.add('selected');
+
+          if (_youHostLiveUserIds.includes(u.user_id)) div.classList.add('selected');
+          // if (u.user_id == _youHostLiveUserId) div.classList.add('selected');
 
           const img = document.createElement('img');
           img.id = `${u.user_id}`;
@@ -607,11 +659,11 @@ const LiveHotSeat = (function () {
           img.loading = 'lazy';
           img.alt = `User ${u.user_id}`;
           img.title = `[ ${u.display_name} ] ${u.comment}`;
-          img.style.filter = u.filter;
+          // img.style.filter = u.filter;
 
           const btn = document.createElement('button');
           btn.className = 'hover-btn';
-          btn.textContent = 'Live Hot Seat'
+          btn.textContent = 'Live Stage'
           btn.style = 'font-size: .2rem';
 
           div.appendChild(img);
@@ -660,7 +712,7 @@ const LiveHotSeat = (function () {
             clearTimeout(_debounceTimer);
             _debounceTimer = null;
             
-            if (_liveHotSeatIsActive){ return }
+            // if (_youHostLiveIsActive){ return }
 
             _debounceTimer = setTimeout(async () => {
                 const entries = Object.entries(states).map(async ([id, [u]]) => ({
@@ -672,6 +724,7 @@ const LiveHotSeat = (function () {
                 renderGrid(resolvedUsers);
             }, 1000);
         }).subscribe();
+    console.log("Connected Host Real-time...", getLocalTime());
   }
 
   async function startAnonymousRealtime(){
@@ -705,7 +758,7 @@ const LiveHotSeat = (function () {
                 comment: _comment, 
                 width: imageDataObj.width, 
                 height: imageDataObj.height,
-                filter: `blur(${sliderCameraBlur.value}px)` 
+                // filter: `blur(${sliderCameraBlur.value}px)` 
             });
             _updateLiveAudienceUserIntervalId = setInterval( async function(){
                 const imageDataObj = getImage(_liveAudienceVideo);
@@ -720,7 +773,7 @@ const LiveHotSeat = (function () {
                     width: imageDataObj.width, 
                     height: imageDataObj.height,
                     isFocused: !window.isBlurred,
-                    filter: `blur(${sliderCameraBlur.value}px)`
+                    // filter: `blur(${sliderCameraBlur.value}px)`
                 });
                 
             }, 10000);
@@ -731,13 +784,13 @@ const LiveHotSeat = (function () {
         _privateChannel
             .on('broadcast', { event: 'private_message' }, (data) => {
                 console.log('Received Real-time Message: ', data.payload);
-                if ('offerLiveHotSeat' in data.payload.message && data.payload.message.offerLiveHotSeat){
-                    gsap.set("#accept-live-hot-seat-flexbox", { display: 'flex', top: '50%' });
+                if ('offerYouHostLive' in data.payload.message && data.payload.message.offerYouHostLive){
+                    gsap.set("#accept-you-host-live-flexbox", { display: 'flex', top: '50%' });
                 }
-                if ('declineLiveHotSeat' in data.payload.message && data.payload.message.declineLiveHotSeat){
-                    gsap.set("#accept-live-hot-seat-flexbox", { display: 'none'});
+                if ('declineYouHostLive' in data.payload.message && data.payload.message.declineYouHostLive){
+                    gsap.set("#accept-you-host-live-flexbox", { display: 'none'});
                 }                
-                if ('closeLiveHotSeat' in data.payload.message && data.payload.message.closeLiveHotSeat){
+                if ('closeYouHostLive' in data.payload.message && data.payload.message.closeYouHostLive){
                     location.reload();
                 }                
                 if ('isLive' in data.payload.message && !data.payload.message.isLive){
@@ -754,7 +807,7 @@ const LiveHotSeat = (function () {
   }
 
   function stopAnonymousRealtime(){
-    gsap.set("#accept-live-hot-seat-flexbox", { display: 'none' });
+    gsap.set("#accept-you-host-live-flexbox", { display: 'none' });
     _sbc.removeAllChannels();
   }
 
@@ -881,10 +934,10 @@ const LiveHotSeat = (function () {
 
       let currentStream;
 
-      const sliderCameraBlur = document.getElementById('camera-blur');
-      sliderCameraBlur.onchange = () => {
-        gsap.set(`#${_liveAudienceVideo.id}`, { filter: `blur(${sliderCameraBlur.value}px)`});
-      };
+      // const sliderCameraBlur = document.getElementById('camera-blur');
+      // sliderCameraBlur.onchange = () => {
+      //   gsap.set(`#${_liveAudienceVideo.id}`, { filter: `blur(${sliderCameraBlur.value}px)`});
+      // };
 
       // Set a timeout for 10 seconds. If something uknown happens, it will be caught here...
       // const failedCameraTimeoutId = setTimeout(function(){
@@ -939,8 +992,8 @@ const LiveHotSeat = (function () {
     });
   }
 
-  function stopLiveAudience(startingLiveHotSeat = false){
-    if (!startingLiveHotSeat) stopAnonymousRealtime();
+  function stopLiveAudience(startingYouHostLive = false){
+    if (!startingYouHostLive) stopAnonymousRealtime();
     clearInterval(_updateLiveAudienceUserIntervalId);
     const stream = _liveAudienceVideo.srcObject;
     if (stream) {
@@ -976,7 +1029,7 @@ const LiveHotSeat = (function () {
         fixedRatio: false,
         minRatio: 9/16,
         maxRatio: 16/9,
-        scaleLastRow: true,
+        scaleLastRow: false,
         alignItems: 'center'
     }).layout; 
     
@@ -984,7 +1037,7 @@ const LiveHotSeat = (function () {
     window.addEventListener('resize', () => _layout());
   }
 
-  function initializeSession(applicationId, sessionId, token) {
+  function initializeSession(applicationId, sessionId, token, e) {
     _session = OT.initSession(applicationId, sessionId);
 
     // Subscribe to a newly created stream
@@ -997,7 +1050,8 @@ const LiveHotSeat = (function () {
         }, handleError);
         subscriber.on('videoElementCreated', function(event) {
             if (_isModerator){
-              event.element.style.filter = _users[_liveHotSeatUserId][0].filter;
+              // event.element.style.filter = _users[_youHostLiveUserId][0].filter;
+              event.element.style.backgroundColor = '#00B140';
             }
         });
         _subscribers.push(subscriber);
@@ -1036,7 +1090,7 @@ const LiveHotSeat = (function () {
     const publisher = OT.initPublisher(_layoutEl, options, handleError);
     publisher.on('videoElementCreated', (event) => {
       if (_isClient){
-        event.element.style.filter = document.getElementById(_liveAudienceVideo.id).style.filter;
+        // event.element.style.filter = document.getElementById(_liveAudienceVideo.id).style.filter;
       }
     });
     _layout();
@@ -1084,18 +1138,18 @@ const LiveHotSeat = (function () {
     subscribe, 
     startLiveAudience, 
     stopLiveAudience,
-    startLiveHotSeat, 
-    stopLiveHotSeat,
-    offerLiveHotSeat,
+    startYouHostLive, 
+    stopYouHostLive,
+    offerYouHostLive,
     signOut
   };
 
   if (_isModerator){
-    commonPublic.offerLiveHotSeat = offerLiveHotSeat;
+    commonPublic.offerYouHostLive = offerYouHostLive;
     commonPublic.loginWithEmail = loginWithEmail;
   }
 
   return commonPublic;
 })();
 
-window.LiveHotSeat = LiveHotSeat;
+window.YouHostLive = YouHostLive;
