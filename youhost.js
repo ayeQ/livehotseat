@@ -67,6 +67,12 @@
     });
 
     const closeYouHostLiveBtn = document.getElementById('close-you-host-live-button');    
-    closeYouHostLiveBtn.addEventListener('mouseup', async ()=> await YouHostLive.stopYouHostLive());
+    closeYouHostLiveBtn.addEventListener('mouseup', async ()=> {
+        if (closeYouHostLiveBtn.innerHTML == 'Join Live Stage') {        
+            closeYouHostLiveBtn.innerHTML = 'End Live Stage';
+            await YouHostLive.startYouHostLive();
+        } else 
+            await YouHostLive.stopYouHostLive();
+        });
 
   })();

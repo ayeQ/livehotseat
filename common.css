@@ -10,13 +10,13 @@
   object-fit: contain !important; 
 }
 
-.OT_publisher {
+/* .OT_publisher {
   top:0 !important;
   left: 0 !important;
   width: 90px !important;
   height: 60px !important;
   z-index: 2;
-}
+} */
 
 /* .OT_subscriber {
   top:0 !important;

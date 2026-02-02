@@ -1,6 +1,6 @@
 (() => {
-    const liveHotSeatEvents = async (e) => {
-        console.log('liveHotSeatEvents', e);
+    const youHostLiveEvents = async (e) => {
+        console.log('youHostLiveEvents', e);
         switch (e.event) {
             case 'SIGNED_IN_WITH_EMAIL':
             case 'SIGNED_IN_WITH_CURRENT_SESSION':
@@ -12,7 +12,14 @@
                 break;
         }
     };
-    LiveHotSeat.subscribe(liveHotSeatEvents);
+    YouHostLive.subscribe(youHostLiveEvents);
+
+    const closeWelcomeBtn = document.getElementById('close-welcome-button');
+    closeWelcomeBtn.addEventListener('mouseup', function() {
+        gsap.set("#welcome-dialog", { display: "none"}); 
+        gsap.set("#nav-flexbox", { display: "flex", opacity: 1 });
+        YouHostLive.unMute();
+    });
 
     const openMissionBtn = document.getElementById('open-mission-button');
     openMissionBtn.addEventListener('mouseup', function() {
@@ -26,22 +33,22 @@
         gsap.set("#nav-flexbox", { display: "flex" });
     });  
     
-    const openLiveHotSeatBtn = document.getElementById('open-live-hot-seat-button');
-    openLiveHotSeatBtn.addEventListener('mouseup', function() {
-        gsap.set("#live-hot-seat-dialog", { display: "flex"}); 
+    const openYouHostLiveBtn = document.getElementById('open-you-host-live-button');
+    openYouHostLiveBtn.addEventListener('mouseup', function() {
+        gsap.set("#you-host-live-dialog", { display: "flex"}); 
         gsap.set("#nav-flexbox", { display: "none" });
     });
 
-    const agreeLiveHotSeatBtn = document.getElementById('agree-live-hot-seat-button');    
-    agreeLiveHotSeatBtn.addEventListener('mouseup', function() {
+    const agreeYouHostLiveBtn = document.getElementById('agree-you-host-live-button');    
+    agreeYouHostLiveBtn.addEventListener('mouseup', function() {
         gsap.set("#nav-flexbox", { display: "none" });
-        gsap.set("#live-hot-seat-dialog", { display: "none"});
+        gsap.set("#you-host-live-dialog", { display: "none"});
         gsap.set("#live-audience-dialog", { display: "flex"});
     });  
     
-    const closeLiveHotSeatDialogBtn = document.getElementById('close-live-hot-seat-dialog-button');    
-    closeLiveHotSeatDialogBtn.addEventListener('mouseup', function() {
-        gsap.set("#live-hot-seat-dialog", { display: "none"});
+    const closeYouHostLiveDialogBtn = document.getElementById('close-you-host-live-dialog-button');    
+    closeYouHostLiveDialogBtn.addEventListener('mouseup', function() {
+        gsap.set("#you-host-live-dialog", { display: "none"});
         gsap.set("#nav-flexbox", { display: "flex" });
     });  
 
@@ -53,25 +60,25 @@
     
     const signOutCameraBtn = document.getElementById('sign-out-camera-button');    
     signOutCameraBtn.addEventListener('mouseup', async function() {
-        LiveHotSeat.stopLiveAudience();
+        YouHostLive.stopLiveAudience();
         gsap.set("#live-audience-camera-flexbox", { display: "none"});
         gsap.set("#nav-flexbox", { display: "flex" });
     });
 
-    const closeLiveHotSeatBtn = document.getElementById('close-live-hot-seat-button');    
-    closeLiveHotSeatBtn.addEventListener('mouseup', async function() {
-        await LiveHotSeat.stopLiveHotSeat();
+    const closeYouHostLiveBtn = document.getElementById('close-you-host-live-button');    
+    closeYouHostLiveBtn.addEventListener('mouseup', async function() {
+        await YouHostLive.stopYouHostLive();
     });
 
-    const acceptLiveHotSeatBtn = document.getElementById('accept-live-hot-seat-button');    
-    acceptLiveHotSeatBtn.addEventListener('mouseup', async function() {
+    const acceptYouHostLiveBtn = document.getElementById('accept-you-host-live-button');    
+    acceptYouHostLiveBtn.addEventListener('mouseup', async function(e) {
         gsap.set("#fullscreen-video-container", { display: "none"});
         gsap.set("#live-audience-camera-flexbox", { display: "none"});
-        gsap.set("#accept-live-hot-seat-flexbox", { display: "none" });
-        gsap.set("#close-live-hot-seat-flexbox", { display: "flex" });
+        gsap.set("#accept-you-host-live-flexbox", { display: "none" });
+        gsap.set("#close-you-host-live-flexbox", { display: "flex" });
         gsap.set("#title-flexbox", { display: "none" });
         gsap.set("#nav-flexbox", { display: "none" });
-        await LiveHotSeat.startLiveHotSeat();
+        await YouHostLive.startYouHostLive(e);
     });
 
     const goLiveAudienceBtn = document.getElementById('go-live-audience-button');    
@@ -81,12 +88,12 @@
         gsap.set('#loading-dialog', { display: 'flex' });
 
         try {
-            await LiveHotSeat.startLiveAudience();
+            await YouHostLive.startLiveAudience();
 
             gsap.set('#loading-dialog', { display: 'none' });
             gsap.set("#live-audience-camera-flexbox", { display: "flex"});
         } catch (error) {
-            LiveHotSeat.stopLiveAudience();
+            YouHostLive.stopLiveAudience();
             gsap.set("#live-audience-dialog", { display: "flex"});
             gsap.set("#nav-flexbox", { display: "flex" });
             gsap.set('#loading-dialog', { display: 'none' });
@@ -123,7 +130,7 @@
                     ease: "random(power2, inOut)" // distributes the start times
                 },
                 ease: "power2.inOut",
-                repeat: 5,
+                repeat: 3,
                 // repeatDelay: 1,
                 yoyo: true
         });
@@ -137,9 +144,12 @@
                 opacity: 1,
                 duration: 3,
                 ease: "power2.inOut",
+                onComplete: () => {
+                    YouHostLive.renderLiveStreamOnClient();
+                }
         });
 
-        gsap.set("#nav-flexbox", { display: "flex", opacity: 1 });
+        
 
     }
 })();

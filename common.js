@@ -3,13 +3,16 @@ const YouHostLive = (function () {
   const _appName = getAppName();
   const _appModeratorNames = ['livehotseat','youhost'];
   const _isModerator = _appModeratorNames.includes(_appName);
-  const _isHostOnClient = isHostOnClient();
+  // const _isHostOnClient = isHostOnClient();
   const _appClientNames = ['polrized', 'weekdaze'];
-  const _appModerated = 'weekdaze';
+  const _appModerated = 'polrized';
   const _isClient = _appClientNames.includes(_appName);
   const _isDev = window.location.hostname.includes('.wstd.io');
   const supabaseUrl = 'https://edfgdkdaurrrygzyfiyc.supabase.co';
   const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkZmdka2RhdXJycnlnenlmaXljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4NDczNzgsImV4cCI6MjA3MTQyMzM3OH0.AWa3MC8T7nPYukDU7BI5yc9BOe5XbKCMV_1-R8RI6ZE';
+  
+  const _closeYouHostLiveBtn = document.getElementById('close-you-host-live-button');
+  
   const _liveBtn = document.getElementById('live-button');
   const _audienceToggle = document.getElementById('audience-toggle');
   const _imageGrid = document.querySelector('.image-grid');
@@ -22,7 +25,7 @@ const YouHostLive = (function () {
   let _users = {}, _debounceTimer = null, _fetchedUrls = new Map(), _private_channels = new Map();
   let _youHostLiveUserIds = [], _youHostLiveIsActive = false, _youHostLiveFilter;
   let _session, _layout, _layoutEl;
-  let _subscribers = []
+  let _subscribers = [], _youHostLiveUserIds_onStage = [];
   let _subscribeCallback = null;
   let _ytplayeriframe = null;
   let _ytplayer = null;
@@ -55,15 +58,15 @@ const YouHostLive = (function () {
     checkAppWebsitePermission();
 
     await Promise.all([
-      loadScript("https://apis.google.com/js/platform.js", false),
-      loadScript("https://www.youtube.com/iframe_api", false),
-      loadScript("https://challenges.cloudflare.com/turnstile/v0/api.js", false),
-      loadScript("https://unpkg.com/@supabase/supabase-js@2.43.3/dist/umd/supabase.js", false),
-      loadScript("https://unpkg.com/gsap@3/dist/gsap.min.js", false),
-      loadScript("https://unpkg.com/gsap@3/dist/TextPlugin.min.js", false),
-      loadScript("https://unpkg.com/gsap@3/dist/SplitText.min.js", false),
-      loadScript("https://unpkg.com/@vonage/client-sdk-video@2/dist/js/opentok.js", false),
-      loadScript("https://unpkg.com/opentok-layout-js@5.5.0/opentok-layout.js", false),
+      loadScript("https://apis.google.com/js/platform.js", null),
+      loadScript("https://www.youtube.com/iframe_api", null),
+      loadScript("https://challenges.cloudflare.com/turnstile/v0/api.js", null),
+      loadScript("https://unpkg.com/@supabase/supabase-js@2.43.3/dist/umd/supabase.js", null),
+      loadScript("https://unpkg.com/gsap@3/dist/gsap.min.js", null),
+      loadScript("https://unpkg.com/gsap@3/dist/TextPlugin.min.js", null),
+      loadScript("https://unpkg.com/gsap@3/dist/SplitText.min.js", null),
+      loadScript("https://unpkg.com/@vonage/client-sdk-video@2/dist/js/opentok.js", null),
+      loadScript("https://unpkg.com/opentok-layout-js@5.5.0/opentok-layout.js", null),
       loadScript(`https://youhostlive.nightowllogic.com/${_isDev ? _appName : _appName + ""}.js`, true),
       loadStyle("https://youhostlive.nightowllogic.com/common.css"),
       loadStyle(`https://youhostlive.nightowllogic.com/${_appName}.css`)
@@ -98,6 +101,7 @@ const YouHostLive = (function () {
           if (error) throw error;
           if (success) {
             _userSession = session;
+            styleLiveStageBtn();
             await isShowLive(true);
           } else {
             _userSession = null;
@@ -125,6 +129,7 @@ const YouHostLive = (function () {
           _userSession = session;
 
           if (_isModerator && _publicChannel == null){
+            styleLiveStageBtn();
             await isShowLive(true);
             await startHostRealtime();
           }          
@@ -136,18 +141,6 @@ const YouHostLive = (function () {
     });
 
     if (_isClient){
-      // YouTube Subscribe.
-      const ytsubscribe_div = document.createElement("div");
-      ytsubscribe_div.className = 'g-ytsubscribe';
-      ytsubscribe_div.dataset.channelid = 'UCHBn_I8jT29vLiu9Che-Lew';
-      ytsubscribe_div.dataset.layout = 'default';
-      ytsubscribe_div.dataset.count = 'default';
-      ytsubscribe_div.dataset.theme = 'dark';
-
-      document.body.appendChild(ytsubscribe_div);
-      if (window.gapi?.ytsubscribe?.go) {
-        gapi.ytsubscribe.go();
-      }
 
       document.getElementById('text-name').setAttribute('maxlength', '25');
       document.getElementById('textarea-comment').setAttribute('maxlength', '130');
@@ -267,17 +260,20 @@ const YouHostLive = (function () {
   }
 
   function renderLiveStreamOnClient(){
+    if (!_isLive) return;
+    gsap.set("#welcome-dialog", { display: "flex"});  
+    document.getElementById('open-you-host-live-button').style.display = 'inline-block';
+// return;
       _ytplayeriframe = document.createElement('iframe');
       _ytplayeriframe.id = 'ytplayeriframe';
       _ytplayeriframe.type = 'text/html';
-      _ytplayeriframe.src = `https://www.youtube-nocookie.com/embed/${_youTubeVideoId}?si=RW9jDGDcqqPgCgr6$?autoplay=0&rel=0&playsinline=1&keyboard=0&iv_load_policy=3&fs=0&controls=0&mute=0&enablejsapi=1&showinfo=0&modestbranding=1`; 
       _ytplayeriframe.allow = "accelerometer; autoplay;"
-      // _ytplayeriframe.src = `https://www.youtube-nocookie.com/embed/${_youTubeVideoId}?autoplay=0&rel=0&playsinline=1&keyboard=0&iv_load_policy=3&fs=0&controls=0&mute=0&enablejsapi=1&showinfo=0&modestbranding=1`; 
+      _ytplayeriframe.src = `https://www.youtube-nocookie.com/embed/${_youTubeVideoId}?autoplay=1&rel=0&playsinline=1&keyboard=0&iv_load_policy=3&fs=0&controls=0&mute=1&enablejsapi=1&showinfo=0&modestbranding=1`; 
       _ytplayeriframe.style.width = '100vw';
       _ytplayeriframe.style.height = '100vh';
       _ytplayeriframe.style.position = 'absolute';
       _ytplayeriframe.style.border = 'none';
-      _ytplayeriframe.style.zIndex = 2;
+      _ytplayeriframe.style.zIndex = -1;
       const fullscreenVideoContainer = document.getElementById('fullscreen-video-container');
       const fullscreenSib = document.getElementById('vimeoplayer');
       fullscreenVideoContainer.insertBefore(_ytplayeriframe, fullscreenSib);
@@ -292,7 +288,7 @@ const YouHostLive = (function () {
       if (event.data === YT.PlayerState.PLAYING) {
         // Video started playing
         fullscreenVideoContainer.style.zIndex = -1;
-        _ytplayer.setVolume(100);
+        // _ytplayer.setVolume(100);
       }
     });
     
@@ -332,14 +328,22 @@ const YouHostLive = (function () {
 
     _subscribers = [];
     initializeSession(applicationId, sessionId, token, e);
+  
+    _youHostLiveIsActive = true;
+    if (_isModerator){
+      styleLiveStageBtn();
+    }
+    
   }
 
   async function stopYouHostLive() {
     const youHostLiveContainerEl = document.getElementById('layoutContainer');
     youHostLiveContainerEl.style.display = 'none';
     if (_isModerator){
-      _youHostLiveUserIds.forEach( async(youHostLiveUserId) => await sendUserMessage( youHostLiveUserId, { closeYouHostLive:true }));
-      _youHostLiveUserIds = [];
+        _youHostLiveUserIds.forEach( async(youHostLiveUserId) => await sendUserMessage( youHostLiveUserId, { closeYouHostLive:true }));
+        _youHostLiveUserIds = [];
+      
+
       // localStorage.setItem('YouHostLiveUserIds', JSON.stringify(_youHostLiveUserIds));
       // await sendUserMessage( _youHostLiveUserId, { closeYouHostLive:true });
       // _youHostLiveUserId = null;
@@ -360,10 +364,10 @@ const YouHostLive = (function () {
     location.reload();
   }
 
-  async function loadScript(src, bustIfDev = true) {
+  async function loadScript(src, forceBust = false) {
     return new Promise((resolve, reject) => {
       const s = document.createElement("script");
-      if (_isDev && bustIfDev) {
+      if ((forceBust != null) && (_isDev || forceBust)) {
         s.src = src + "?v=" + new Date().getTime();
       } else {
         s.src = src;
@@ -429,6 +433,11 @@ const YouHostLive = (function () {
     _liveBtn.style.display = 'inline-block';
   }
   
+  function styleLiveStageBtn(){
+    _closeYouHostLiveBtn.innerHTML = _youHostLiveIsActive ? 'End Live Stage' : 'Join Live Stage';
+    _closeYouHostLiveBtn.style.display = 'inline-block';
+  }
+
   async function isShowLive(noToken = false){
     if (noToken){
       const { isLive, youTubeVideoId } = await callFunction('is-show-live-no-token', { 
@@ -448,12 +457,12 @@ const YouHostLive = (function () {
       _youTubeVideoId = youTubeVideoId;
     }
     if (_isModerator) styleLiveBtn();
-    if (_isClient && _isLive) {
-      document.getElementById('open-you-host-live-button').style.display = 'inline-block';
-      if (!_isHostOnClient)  // I DON'T LIKE THIS ANYMORE. OR DO I?
-        renderLiveStreamOnClient();  
+    // if (_isClient && _isLive) {
+      // document.getElementById('open-you-host-live-button').style.display = 'inline-block';
+      // if (!_isHostOnClient)  // I DON'T LIKE THIS ANYMORE. OR DO I?
+        // renderLiveStreamOnClient();  
       
-    }
+    // }
   }
 
   async function toggleShowIsLive(){
@@ -522,7 +531,7 @@ const YouHostLive = (function () {
                   const parent = img.closest('.image-item');
                   removeImageSmoothly(parent);
                   _private_channels.delete(img.id);
-                  _youHostLiveUserIds = _youHostLiveUserIds.filter( userId => !_youHostLiveUserIds.includes(userId));
+                  _youHostLiveUserIds = _youHostLiveUserIds.filter( userId => userId != img.id);
                   // localStorage.setItem('YouHostLiveUserIds', JSON.stringify(_youHostLiveUserIds));
                   // if (img.id == _youHostLiveUserId){
                   //   _youHostLiveUserId = null;
@@ -551,18 +560,19 @@ const YouHostLive = (function () {
   async function offerYouHostLive(liveAudienceUserId){
     const userImgEl = document.getElementById(liveAudienceUserId).closest('.image-item'); 
     if (userImgEl.classList.contains('selected')){
-      await sendUserMessage( liveAudienceUserId, { declineYouHostLive: true });
       _youHostLiveUserIds = _youHostLiveUserIds.filter( userId => userId != liveAudienceUserId);
-      // localStorage.setItem('YouHostLiveUserIds', JSON.stringify(_youHostLiveUserIds));
-      // _youHostLiveUserId = null;
-      // localStorage.setItem('YouHostLiveUserId', null);
       userImgEl.classList.remove('selected');
+
+      if (_youHostLiveUserIds_onStage.includes(liveAudienceUserId)){
+        _youHostLiveUserIds_onStage = _youHostLiveUserIds_onStage.filter( userId => userId != liveAudienceUserId);
+        await sendUserMessage( liveAudienceUserId, { closeYouHostLive: true });
+      } else {
+        await sendUserMessage( liveAudienceUserId, { declineYouHostLive: true });
+      }
+
     } else {
       await sendUserMessage( liveAudienceUserId, { offerYouHostLive: true });
       _youHostLiveUserIds.push(liveAudienceUserId);
-      // localStorage.setItem('YouHostLiveUserIds', JSON.stringify(_youHostLiveUserIds));
-      // _youHostLiveUserId = liveAudienceUserId;
-      // localStorage.setItem('YouHostLiveUserId', _youHostLiveUserId);
       userImgEl.classList.add('selected');
     }
   }
@@ -580,13 +590,16 @@ const YouHostLive = (function () {
         if ('closeYouHostLive' in payload && payload.closeYouHostLive){
             stopYouHostLive();
         }
+        if (!('acceptedYouHostLive' in payload)) return;
+        _youHostLiveUserIds_onStage.push(payload.user_id);
     } else {
         if (!('acceptedYouHostLive' in payload)) return;
-        _youHostLiveIsActive = true;
+        // _youHostLiveIsActive = true;
+        _youHostLiveUserIds_onStage.push(payload.user_id);
         // _youHostLiveFilter = payload.filter;
-        if (_isModerator) _liveBtn.style.display = 'none';
+        // if (_isModerator) _liveBtn.style.display = 'none';
         // _imageGrid.style.display = 'none';
-        document.getElementById('close-you-host-live-flexbox').style.display = 'flex';
+        _closeYouHostLiveBtn.innerHTML = 'End Live Stage';
         startYouHostLive(); 
     }
   }
@@ -1061,8 +1074,8 @@ const YouHostLive = (function () {
     _session.on('streamDestroyed', function(event) {
         event.stream.destroy();
         _layout();
-        alert('Stream Destroyed.');
-        location.reload();
+        // alert('Stream Destroyed.');
+        // location.reload();
     });
 
     _session.on('streamPropertyChanged', (event) => {
@@ -1133,9 +1146,16 @@ const YouHostLive = (function () {
     } 
   }
 
+  function unMute(){
+    _ytplayer.unMute();
+    _ytplayer.setVolume(100);
+  }
+
   let commonPublic = {
+    unMute,
     init, // In WebStudio HTML Embed onload
     subscribe, 
+    renderLiveStreamOnClient,
     startLiveAudience, 
     stopLiveAudience,
     startYouHostLive, 

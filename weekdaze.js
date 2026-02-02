@@ -14,6 +14,13 @@
     };
     YouHostLive.subscribe(youHostLiveEvents);
 
+    const closeWelcomeBtn = document.getElementById('close-welcome-button');
+    closeWelcomeBtn.addEventListener('mouseup', function() {
+        gsap.set("#welcome-dialog", { display: "none"}); 
+        gsap.set("#nav-flexbox", { display: "flex", opacity: 1 });
+        YouHostLive.unMute();
+    });
+
     const openMissionBtn = document.getElementById('open-mission-button');
     openMissionBtn.addEventListener('mouseup', function() {
         gsap.set("#mission-dialog", { display: "flex"}); 
@@ -123,7 +130,7 @@
                     ease: "random(power2, inOut)" // distributes the start times
                 },
                 ease: "power2.inOut",
-                repeat: -1,
+                repeat: 3,
                 // repeatDelay: 1,
                 yoyo: true
         });
@@ -137,9 +144,12 @@
                 opacity: 1,
                 duration: 3,
                 ease: "power2.inOut",
+                onComplete: () => {
+                    YouHostLive.renderLiveStreamOnClient();
+                }
         });
 
-        gsap.set("#nav-flexbox", { display: "flex", opacity: 1 });
+        
 
     }
 })();
